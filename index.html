@@ -1,268 +1,828 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Responsive Mario-style Quiz Game</title>
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
-<style>
-    html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; width: 100%; background: #000; }
-    .overlay {
-        position: absolute; left: 50%; transform: translateX(-50%); width: 90%; max-width: 450px;
-        padding: 20px; background: rgba(0,0,0,0.9); color: #fff; display: none;
-        font-family: Arial, sans-serif; border-radius: 10px; text-align: center; z-index: 10;
-        box-sizing: border-box; border: 1px solid #444;
-    }
-    #quiz-container { top: 20%; }
-    #gameOver { top: 40%; }
-    #scorecard-container { top: 10%; max-height: 80%; overflow-y: auto; }
-    
-    .overlay h2 { margin-top: 0; }
-    .overlay button {
-        margin-top: 10px; padding: 12px 24px; background: #555; color: #fff;
-        border: none; border-radius: 6px; cursor: pointer; font-size: 18px;
-    }
-    #startOver, #play-again { background: #007bff; }
-    #quiz-options button { width: 100%; margin: 8px auto; background: #333; }
-    #quiz-timer { margin-top: 10px; font-weight: 700; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Responsive Mario-style Quiz Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100%;
+        width: 100%;
+        background: #000;
+      }
+      .overlay {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 450px;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.9);
+        color: #fff;
+        display: none;
+        font-family: Arial, sans-serif;
+        border-radius: 10px;
+        text-align: center;
+        z-index: 10;
+        box-sizing: border-box;
+        border: 1px solid #444;
+      }
+      #quiz-container {
+        top: 20%;
+      }
+      #gameOver {
+        top: 40%;
+      }
+      #scorecard-container {
+        top: 10%;
+        max-height: 80%;
+        overflow-y: auto;
+      }
 
-    #scorecard-results ul { list-style-type: none; padding: 0; text-align: left; }
-    #scorecard-results li {
-        background: #2a2a2a; padding: 10px; margin-bottom: 8px; border-radius: 5px;
+      .overlay h2 {
+        margin-top: 0;
+      }
+      .overlay button {
+        margin-top: 10px;
+        padding: 12px 24px;
+        background: #555;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 18px;
+      }
+      #startOver,
+      #play-again {
+        background: #007bff;
+      }
+      #quiz-options button {
+        width: 100%;
+        margin: 8px auto;
+        background: #333;
+      }
+      #quiz-timer {
+        margin-top: 10px;
+        font-weight: 700;
+      }
+
+      #scorecard-results ul {
+        list-style-type: none;
+        padding: 0;
+        text-align: left;
+      }
+      #scorecard-results li {
+        background: #2a2a2a;
+        padding: 10px;
+        margin-bottom: 8px;
+        border-radius: 5px;
         border-left: 5px solid #ff4747; /* Default to wrong */
-    }
-    #scorecard-results li.correct { border-left-color: #7CFC00; }
-</style>
-</head>
-<body>
+      }
+      #scorecard-results li.correct {
+        border-left-color: #7cfc00;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="quiz-container" class="overlay">
+      <div id="quiz-question"></div>
+      <div id="quiz-options"></div>
+      <div id="quiz-timer"></div>
+    </div>
 
-<div id="quiz-container" class="overlay">
-  <div id="quiz-question"></div>
-  <div id="quiz-options"></div>
-  <div id="quiz-timer"></div>
-</div>
+    <div id="gameOver" class="overlay">
+      <h2>Game Over</h2>
+      <button id="startOver">Start Over</button>
+    </div>
 
-<div id="gameOver" class="overlay">
-  <h2>Game Over</h2>
-  <button id="startOver">Start Over</button>
-</div>
+    <div id="scorecard-container" class="overlay">
+      <h2>Quiz Results</h2>
+      <h3 id="scorecard-final-score"></h3>
+      <div id="scorecard-results"></div>
+      <button id="play-again">Play Again</button>
+    </div>
 
-<div id="scorecard-container" class="overlay">
-    <h2>Quiz Results</h2>
-    <h3 id="scorecard-final-score"></h3>
-    <div id="scorecard-results"></div>
-    <button id="play-again">Play Again</button>
-</div>
+    <script>
+      // --- LEVEL DATA ---
+      const platformData = [
+        { x: 200, y: 500 },
+        { x: 500, y: 450 },
+        { x: 800, y: 500 },
+        { x: 1100, y: 400 },
+        { x: 1400, y: 450 },
+        { x: 1700, y: 500 },
+        { x: 2000, y: 400 },
+        { x: 2300, y: 450 },
+        { x: 2600, y: 500 },
+        { x: 2900, y: 400 },
+        { x: 3200, y: 350 },
+        { x: 3500, y: 400 },
+        { x: 3800, y: 500 },
+        { x: 4100, y: 450 },
+        { x: 4400, y: 400 },
+        { x: 4700, y: 350 },
+      ];
+      const brickData = [
+        { x: 200, y: 350 },
+        { x: 500, y: 300 },
+        { x: 800, y: 350 },
+        { x: 1100, y: 250 },
+        { x: 1400, y: 300 },
+        { x: 1700, y: 350 },
+        { x: 2000, y: 250 },
+        { x: 2300, y: 300 },
+        { x: 2600, y: 350 },
+        { x: 2900, y: 250 },
+        { x: 3200, y: 200 },
+        { x: 3500, y: 250 },
+        { x: 3800, y: 350 },
+        { x: 4100, y: 300 },
+        { x: 4400, y: 250 },
+      ];
+      const enemyData = [
+        { x: 800, y: 450, minX: 650, maxX: 950, isQuestionEnemy: false },
+        { x: 1400, y: 400, minX: 1250, maxX: 1550, isQuestionEnemy: true },
+        { x: 2000, y: 350, minX: 1850, maxX: 2150, isQuestionEnemy: false },
+        { x: 2600, y: 450, minX: 2450, maxX: 2750, isQuestionEnemy: true },
+        { x: 3500, y: 350, minX: 3350, maxX: 3650, isQuestionEnemy: false },
+        { x: 4100, y: 400, minX: 3950, maxX: 4250, isQuestionEnemy: false },
+      ];
+      const spikeData = [
+        { x: 1800, y: 480 },
+        { x: 3600, y: 480 },
+      ];
+      const lavaData = { x: 2100, y: 480 }; // This is now just a small lava pit
+      const bossData = { x: 4650, y: 260 };
 
-<script>
-// --- LEVEL DATA ---
-const platformData = [
-    {x: 200, y: 500}, {x: 500, y: 450}, {x: 800, y: 500}, {x: 1100, y: 400}, {x: 1400, y: 450}, {x: 1700, y: 500},
-    {x: 2000, y: 400}, {x: 2300, y: 450}, {x: 2600, y: 500}, {x: 2900, y: 400}, {x: 3200, y: 350}, {x: 3500, y: 400},
-    {x: 3800, y: 500}, {x: 4100, y: 450}, {x: 4400, y: 400}, {x: 4700, y: 350}
-];
-const brickData = [
-    {x: 200, y: 350}, {x: 500, y: 300}, {x: 800, y: 350}, {x: 1100, y: 250}, {x: 1400, y: 300}, {x: 1700, y: 350},
-    {x: 2000, y: 250}, {x: 2300, y: 300}, {x: 2600, y: 350}, {x: 2900, y: 250}, {x: 3200, y: 200}, {x: 3500, y: 250},
-    {x: 3800, y: 350}, {x: 4100, y: 300}, {x: 4400, y: 250}
-];
-const enemyData = [
-    {x: 800, y: 450, minX: 650, maxX: 950, isQuestionEnemy: false},
-    {x: 1400, y: 400, minX: 1250, maxX: 1550, isQuestionEnemy: true},
-    {x: 2000, y: 350, minX: 1850, maxX: 2150, isQuestionEnemy: false},
-    {x: 2600, y: 450, minX: 2450, maxX: 2750, isQuestionEnemy: true},
-    {x: 3500, y: 350, minX: 3350, maxX: 3650, isQuestionEnemy: false},
-    {x: 4100, y: 400, minX: 3950, maxX: 4250, isQuestionEnemy: false}
-];
-const spikeData = [ {x: 1800, y: 480}, {x: 3600, y: 480} ];
-const lavaData = {x: 2100, y: 480}; // This is now just a small lava pit
-const bossData = { x: 4650, y: 260 };
+      const questions = [
+        {
+          q: 'Which language is used to style web pages?',
+          opts: ['HTML', 'CSS', 'JavaScript', 'Python'],
+          a: 2,
+        },
+        {
+          q: 'Which of these is used to make a website interactive?',
+          opts: ['HTML', 'CSS', 'JavaScript', 'SQL'],
+          a: 3,
+        },
+        { q: '5*3=?', opts: ['15', '10', '8', '20'], a: 0 },
+        {
+          q: 'What color is the sky?',
+          opts: ['Green', 'Blue', 'Red', 'Yellow'],
+          a: 1,
+        },
+        {
+          q: 'What is the largest planet?',
+          opts: ['Mars', 'Earth', 'Jupiter', 'Venus'],
+          a: 2,
+        },
+        {
+          q: 'HTML stands for?',
+          opts: [
+            'HyperText Markup Language',
+            'HighText Machine Language',
+            'Hot Mail',
+            'How To Make Lasagna',
+          ],
+          a: 0,
+        },
+        {
+          q: 'Which is a programming language?',
+          opts: ['Python', 'Snake', 'Lizard', 'Crocodile'],
+          a: 0,
+        },
+        { q: '1+1=?', opts: ['0', '2', '3', '11'], a: 1 },
+        {
+          q: 'What is the fastest land animal?',
+          opts: ['Tiger', 'Cheetah', 'Leopard', 'Lion'],
+          a: 1,
+        },
+        {
+          q: "What is water's chemical formula?",
+          opts: ['CO2', 'H2O', 'O2', 'NaCl'],
+          a: 1,
+        },
+        {
+          q: 'What is the square root of 16?',
+          opts: ['2', '4', '6', '8'],
+          a: 1,
+        },
+        {
+          q: 'In which direction does the sun rise?',
+          opts: ['West', 'East', 'North', 'South'],
+          a: 1,
+        },
+        {
+          q: 'What is the opposite of Hot?',
+          opts: ['Cold', 'Warm', 'Cool', 'Boiling'],
+          a: 0,
+        },
+        {
+          q: 'Which of these is a fruit?',
+          opts: ['Carrot', 'Potato', 'Apple', 'Onion'],
+          a: 2,
+        },
+        {
+          q: 'How many continents are there?',
+          opts: ['5', '6', '7', '8'],
+          a: 2,
+        },
+      ];
+      const finalQuestion = {
+        q: 'Which year was Phaser 3 first released?',
+        opts: ['2015', '2018', '2020', '2013'],
+        a: 1,
+        points: 5,
+      };
 
-const questions = [
-    {q: "2+2=?", opts: ["3", "4", "5", "6"], a: 1}, {q: "Capital of France?", opts: ["London", "Berlin", "Paris", "Rome"], a: 2},
-    {q: "5*3=?", opts: ["15", "10", "8", "20"], a: 0}, {q: "What color is the sky?", opts: ["Green", "Blue", "Red", "Yellow"], a: 1},
-    {q: "What is the largest planet?", opts: ["Mars", "Earth", "Jupiter", "Venus"], a: 2}, {q: "HTML stands for?", opts: ["HyperText Markup Language", "HighText Machine Language", "Hot Mail", "How To Make Lasagna"], a: 0},
-    {q: "Which is a programming language?", opts: ["Python", "Snake", "Lizard", "Crocodile"], a: 0}, {q: "1+1=?", opts: ["0", "2", "3", "11"], a: 1},
-    {q: "What is the fastest land animal?", opts: ["Tiger", "Cheetah", "Leopard", "Lion"], a: 1}, {q: "What is water's chemical formula?", opts: ["CO2", "H2O", "O2","NaCl"], a: 1},
-    {q: "What is the square root of 16?", opts: ["2", "4", "6", "8"], a: 1}, {q: "In which direction does the sun rise?", opts: ["West", "East", "North", "South"], a: 1},
-    {q: "What is the opposite of Hot?", opts: ["Cold", "Warm", "Cool", "Boiling"], a: 0}, {q: "Which of these is a fruit?", opts: ["Carrot", "Potato", "Apple", "Onion"], a: 2},
-    {q: "How many continents are there?", opts: ["5", "6", "7", "8"], a: 2}
-];
-const finalQuestion = { q: "Which year was Phaser 3 first released?", opts: ["2015", "2018", "2020", "2013"], a: 1, points: 5 };
+      class MyGame extends Phaser.Scene {
+        constructor() {
+          super('MyGame');
+        }
 
-class MyGame extends Phaser.Scene {
-    constructor() { super('MyGame'); }
+        preload() {
+          this.load.image(
+            'player',
+            'https://labs.phaser.io/assets/sprites/phaser-dude.png'
+          );
+          this.load.image(
+            'ground',
+            'https://labs.phaser.io/assets/sprites/platform.png'
+          );
+          this.load.image(
+            'brick',
+            'https://labs.phaser.io/assets/sprites/block.png'
+          );
+          this.load.image(
+            'enemy',
+            'https://labs.phaser.io/assets/sprites/space-baddie.png'
+          );
+          this.load.image(
+            'bullet',
+            'https://labs.phaser.io/assets/sprites/bullet.png'
+          );
+          this.load.image(
+            'spike',
+            'https://labs.phaser.io/assets/sprites/spike.png'
+          );
+          this.load.image(
+            'lava',
+            'https://labs.phaser.io/assets/sprites/red.png'
+          );
+          this.load.image(
+            'battle_bg',
+            'https://labs.phaser.io/assets/skies/space3.png'
+          );
+          this.load.image(
+            'boss',
+            'https://labs.phaser.io/assets/sprites/metalslug_monster.png'
+          );
+        }
 
-    preload() {
-        this.load.image('player', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
-        this.load.image('brick', 'https://labs.phaser.io/assets/sprites/block.png');
-        this.load.image('enemy', 'https://labs.phaser.io/assets/sprites/space-baddie.png');
-        this.load.image('bullet', 'https://labs.phaser.io/assets/sprites/bullet.png');
-        this.load.image('spike', 'https://labs.phaser.io/assets/sprites/spike.png');
-        this.load.image('lava', 'https://labs.phaser.io/assets/sprites/red.png');
-        this.load.image('battle_bg', 'https://labs.phaser.io/assets/skies/space3.png');
-        this.load.image('boss', 'https://labs.phaser.io/assets/sprites/metalslug_monster.png');
-    }
+        create() {
+          this.gameOver = false;
+          this.score = 0;
+          this.questionsLeft = [...questions];
+          this.activeQuestion = null;
+          this.quizResults = [];
+          this.baseWidth = 800;
+          this.baseHeight = 600;
+          this.worldWidth = 5000;
+          this.scaleX = 1;
+          this.scaleY = 1;
 
-    create() {
-        this.gameOver = false; this.score = 0; this.questionsLeft = [...questions]; this.activeQuestion = null; this.quizResults = [];
-        this.baseWidth = 800; this.baseHeight = 600; this.worldWidth = 5000;
-        this.scaleX = 1; this.scaleY = 1;
+          this.bg = this.add
+            .tileSprite(0, 0, this.scale.width, this.scale.height, 'battle_bg')
+            .setOrigin(0, 0)
+            .setScrollFactor(0);
 
-        this.bg = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'battle_bg').setOrigin(0, 0).setScrollFactor(0);
-        
-        this.lavaFloor = this.add.tileSprite(0, this.baseHeight, this.worldWidth, 100, 'lava').setOrigin(0, 0);
-        this.physics.add.existing(this.lavaFloor, true); 
+          this.lavaFloor = this.add
+            .tileSprite(0, this.baseHeight, this.worldWidth, 100, 'lava')
+            .setOrigin(0, 0);
+          this.physics.add.existing(this.lavaFloor, true);
 
-        this.platforms = this.physics.add.staticGroup(); 
-        platformData.forEach(p => this.platforms.create(p.x, p.y, 'ground'));
+          this.platforms = this.physics.add.staticGroup();
+          platformData.forEach((p) =>
+            this.platforms.create(p.x, p.y, 'ground')
+          );
 
-        const allPlatforms = this.platforms.getChildren();
-        const chosenPlatforms = [
+          const allPlatforms = this.platforms.getChildren();
+          const chosenPlatforms = [
             allPlatforms[2], // 3rd platform
             allPlatforms[4], // 5th platform
-            allPlatforms[5]  // 6th platform
-        ];
-        this.breakablePlatforms = new Set(chosenPlatforms);
-        
-        this.breakablePlatforms.forEach(platform => {
-            if(platform) platform.setTint(0xffccaa); 
-        });
+            allPlatforms[5], // 6th platform
+          ];
+          this.breakablePlatforms = new Set(chosenPlatforms);
 
-        this.bricks = this.physics.add.staticGroup(); brickData.forEach(b => this.bricks.create(b.x, b.y, 'brick'));
-        this.spike = this.physics.add.staticGroup(); spikeData.forEach(s => this.spike.create(s.x, s.y, 'spike'));
-        this.lava = this.physics.add.staticSprite(lavaData.x, lavaData.y, 'lava'); this.lava.visible = false;
-        
-        this.enemies = this.physics.add.group();
-        enemyData.forEach(e => {
+          this.breakablePlatforms.forEach((platform) => {
+            if (platform) platform.setTint(0xffccaa);
+          });
+
+          this.bricks = this.physics.add.staticGroup();
+          brickData.forEach((b) => this.bricks.create(b.x, b.y, 'brick'));
+          this.spike = this.physics.add.staticGroup();
+          spikeData.forEach((s) => this.spike.create(s.x, s.y, 'spike'));
+          this.lava = this.physics.add.staticSprite(
+            lavaData.x,
+            lavaData.y,
+            'lava'
+          );
+          this.lava.visible = false;
+
+          this.enemies = this.physics.add.group();
+          enemyData.forEach((e) => {
             let enemy = this.enemies.create(e.x, e.y, 'enemy');
             enemy.setCollideWorldBounds(true);
             enemy.minX = e.minX;
             enemy.maxX = e.maxX;
             enemy.isQuestionEnemy = e.isQuestionEnemy;
             enemy.direction = 1; // 1 for right, -1 for left
-        });
-        
-        this.player = this.physics.add.sprite(100, 450, 'player').setBounce(0.2).setCollideWorldBounds(true);
-        this.bullets = this.physics.add.group();
+          });
 
-        this.boss = this.physics.add.sprite(bossData.x, bossData.y, 'boss').setImmovable(true).setCollideWorldBounds(true);
-        this.boss.health = 3; 
-        this.boss.body.setAllowGravity(false);
-        this.bossBullets = this.physics.add.group();
-        this.time.addEvent({ delay: 2000, callback: this.bossShoot, callbackScope: this, loop: true });
+          this.player = this.physics.add
+            .sprite(100, 450, 'player')
+            .setBounce(0.2)
+            .setCollideWorldBounds(true);
+          this.bullets = this.physics.add.group();
 
-        this.randomLavaPits = this.physics.add.group();
-        this.time.addEvent({ delay: 4000, callback: this.spawnLavaPit, callbackScope: this, loop: true });
+          this.boss = this.physics.add
+            .sprite(bossData.x, bossData.y, 'boss')
+            .setImmovable(true)
+            .setCollideWorldBounds(true);
+          this.boss.health = 3;
+          this.boss.body.setAllowGravity(false);
+          this.bossBullets = this.physics.add.group();
+          this.time.addEvent({
+            delay: 2000,
+            callback: this.bossShoot,
+            callbackScope: this,
+            loop: true,
+          });
 
-        this.physics.add.collider(this.player, this.platforms, this.handlePlayerLandOnPlatform, null, this);
-        
-        this.physics.add.collider(this.enemies, this.platforms);
-        this.physics.add.collider(this.boss, this.platforms);
-        this.physics.add.collider(this.player, this.spike, () => this.playerDies(false));
+          this.randomLavaPits = this.physics.add.group();
+          this.time.addEvent({
+            delay: 4000,
+            callback: this.spawnLavaPit,
+            callbackScope: this,
+            loop: true,
+          });
 
-        this.physics.add.overlap(this.player, this.bricks, (p, brick) => this.triggerQuestion(brick, false));
-        this.physics.add.overlap(this.player, this.enemies, () => this.playerDies(false));
-        this.physics.add.overlap(this.player, this.lava, () => { this.lava.visible = true; this.playerDies(false); });
-        this.physics.add.overlap(this.player, this.randomLavaPits, () => this.playerDies(true));
-        this.physics.add.overlap(this.player, this.bossBullets, () => this.playerDies(false));
-        this.physics.add.overlap(this.bullets, this.enemies, this.handleBulletEnemyCollision, null, this);
-        this.physics.add.overlap(this.bullets, this.boss, this.handleBulletBossCollision, null, this);
-        this.physics.add.overlap(this.player, this.lavaFloor, () => this.playerDies(true));
-        
-        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        this.scoreText = this.add.text(16, 16, 'Score: 0', { fill: '#fff' }).setScrollFactor(0);
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.isMobile = !this.sys.game.device.os.desktop;
-        if (this.isMobile) this.createMobileButtons();
+          this.physics.add.collider(
+            this.player,
+            this.platforms,
+            this.handlePlayerLandOnPlatform,
+            null,
+            this
+          );
 
-        this.scale.on('resize', this.handleResize, this);
-        this.handleResize({ width: this.scale.width, height: this.scale.height });
-        document.getElementById('startOver').onclick = () => location.reload();
-        document.getElementById('play-again').onclick = () => location.reload();
-    }
+          this.physics.add.collider(this.enemies, this.platforms);
+          this.physics.add.collider(this.boss, this.platforms);
+          this.physics.add.collider(this.player, this.spike, () =>
+            this.playerDies(false)
+          );
 
-    update() {
-        if (this.gameOver) return;
-        
-        const baseSpeed = 160 * this.scaleX; const jumpVelocity = -380 * this.scaleY; 
-        let vx = 0;
-        if (this.cursors.left.isDown || this.moveLeft) vx = -baseSpeed;
-        else if (this.cursors.right.isDown || this.moveRight) vx = baseSpeed;
-        this.player.setVelocityX(vx);
+          this.physics.add.overlap(this.player, this.bricks, (p, brick) =>
+            this.triggerQuestion(brick, false)
+          );
+          this.physics.add.overlap(this.player, this.enemies, () =>
+            this.playerDies(false)
+          );
+          this.physics.add.overlap(this.player, this.lava, () => {
+            this.lava.visible = true;
+            this.playerDies(false);
+          });
+          this.physics.add.overlap(this.player, this.randomLavaPits, () =>
+            this.playerDies(true)
+          );
+          this.physics.add.overlap(this.player, this.bossBullets, () =>
+            this.playerDies(false)
+          );
+          this.physics.add.overlap(
+            this.bullets,
+            this.enemies,
+            this.handleBulletEnemyCollision,
+            null,
+            this
+          );
+          this.physics.add.overlap(
+            this.bullets,
+            this.boss,
+            this.handleBulletBossCollision,
+            null,
+            this
+          );
+          this.physics.add.overlap(this.player, this.lavaFloor, () =>
+            this.playerDies(true)
+          );
 
-        if ((this.cursors.up.isDown || this.moveUp) && this.player.body.touching.down) {
-             this.player.setVelocityY(jumpVelocity);
+          this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+          this.scoreText = this.add
+            .text(16, 16, 'Score: 0', { fill: '#fff' })
+            .setScrollFactor(0);
+          this.cursors = this.input.keyboard.createCursorKeys();
+          this.isMobile = !this.sys.game.device.os.desktop;
+          if (this.isMobile) this.createMobileButtons();
+
+          this.scale.on('resize', this.handleResize, this);
+          this.handleResize({
+            width: this.scale.width,
+            height: this.scale.height,
+          });
+          document.getElementById('startOver').onclick = () =>
+            location.reload();
+          document.getElementById('play-again').onclick = () =>
+            location.reload();
         }
-        if (this.cursors.down.isDown) this.shootBullet();
 
-        this.enemies.getChildren().forEach(enemy => {
+        update() {
+          if (this.gameOver) return;
+
+          const baseSpeed = 160 * this.scaleX;
+          const jumpVelocity = -380 * this.scaleY;
+          let vx = 0;
+          if (this.cursors.left.isDown || this.moveLeft) vx = -baseSpeed;
+          else if (this.cursors.right.isDown || this.moveRight) vx = baseSpeed;
+          this.player.setVelocityX(vx);
+
+          if (
+            (this.cursors.up.isDown || this.moveUp) &&
+            this.player.body.touching.down
+          ) {
+            this.player.setVelocityY(jumpVelocity);
+          }
+          if (this.cursors.down.isDown) this.shootBullet();
+
+          this.enemies.getChildren().forEach((enemy) => {
             if (!enemy.body) return;
             const enemySpeed = 50 * this.scaleX;
 
             if (enemy.x >= enemy.maxX * this.scaleX) {
-                enemy.direction = -1; 
+              enemy.direction = -1;
             } else if (enemy.x <= enemy.minX * this.scaleX) {
-                enemy.direction = 1; 
+              enemy.direction = 1;
             }
-            
+
             enemy.setVelocityX(enemySpeed * enemy.direction);
-            
+
             if (enemy.body.touching.down) {
-                enemy.setVelocityY(-250 * this.scaleY);
+              enemy.setVelocityY(-250 * this.scaleY);
             }
-        });
-    }
-
-    handlePlayerLandOnPlatform(player, platform) {
-        if (player.body.touching.down && !platform.isBreaking) {
-            if (this.breakablePlatforms.has(platform)) {
-                platform.isBreaking = true;
-                
-                this.tweens.add({
-                    targets: platform,
-                    alpha: 0.2,
-                    yoyo: true,
-                    repeat: 4,
-                    duration: 150,
-                    onComplete: () => {
-                        platform.clearTint();
-                        platform.disableBody(true, true);
-                    }
-                });
-            }
+          });
         }
-    }
-    
-    // --- Unchanged Functions ---
-    handleBulletEnemyCollision(bullet, enemy) { bullet.destroy(); if (enemy.isQuestionEnemy) this.triggerQuestion(enemy, false); else enemy.destroy(); }
-    handleBulletBossCollision(boss, bullet) { bullet.destroy(); boss.health--; boss.setTint(0xff0000); this.time.delayedCall(100, () => boss.clearTint()); if (boss.health <= 0) { boss.destroy(); this.triggerQuestion(null, true); } }
-    bossShoot() { if (!this.boss.active || this.gameOver) return; const bullet = this.bossBullets.create(this.boss.x, this.boss.y, 'bullet'); bullet.setTint(0xffa500).setScale(1.5); this.physics.moveToObject(bullet, this.player, 250 * this.scaleX); }
-    spawnLavaPit() { if (this.gameOver) return; const scaledWorldWidth = this.worldWidth * this.scaleX; const spawnX = Phaser.Math.Between(400 * this.scaleX, scaledWorldWidth); const spawnY = (this.baseHeight - 20) * this.scaleY; const lavaPit = this.randomLavaPits.create(spawnX, spawnY, 'lava'); lavaPit.setScale(0.8 * this.scaleX, 0.5 * this.scaleY).refreshBody(); lavaPit.body.setAllowGravity(false); this.time.delayedCall(5000, () => lavaPit.destroy()); }
-    playerDies(instantRestart = false) { if (this.gameOver) return; this.gameOver = true; this.physics.pause(); this.player.setTint(0xff0000); if (instantRestart) { this.cameras.main.fadeOut(1000, 0, 0, 0); this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.restart()); } else { document.getElementById('gameOver').style.display = 'block'; } }
-    handleResize(gameSize) { const { width, height } = gameSize; this.scaleX = width / this.baseWidth; this.scaleY = height / this.baseHeight; const spriteScale = Math.min(this.scaleX, this.scaleY); this.physics.world.gravity.y = 600 * this.scaleY; const scaledWorldWidth = this.worldWidth * this.scaleX; const scaledWorldHeight = this.baseHeight * this.scaleY; this.physics.world.setBounds(0, 0, scaledWorldWidth, scaledWorldHeight); this.cameras.main.setBounds(0, 0, scaledWorldWidth, scaledWorldHeight); if (this.bg) this.bg.setSize(width, height); if (this.lavaFloor) { this.lavaFloor.setPosition(0, (this.baseHeight - 20) * this.scaleY); this.lavaFloor.setSize(scaledWorldWidth, 100 * this.scaleY);} if (this.player) this.player.setPosition(100 * this.scaleX, 450 * this.scaleY).setScale(spriteScale); this.platforms.getChildren().forEach((p, i) => { if(!p.body) return; p.setPosition(platformData[i].x * this.scaleX, platformData[i].y * this.scaleY).setScale(0.6 * this.scaleX, 0.5 * this.scaleY).refreshBody()}); this.bricks.getChildren().forEach((b, i) => { if(!b.body) return; b.setPosition(brickData[i].x * this.scaleX, brickData[i].y * this.scaleY).setScale(spriteScale).refreshBody()}); this.spike.getChildren().forEach((s, i) => s.setPosition(spikeData[i].x * this.scaleX, spikeData[i].y * this.scaleY).setScale(0.6 * spriteScale).refreshBody()); this.lava.setPosition(lavaData.x * this.scaleX, lavaData.y * this.scaleY).setScale(0.6 * this.scaleX, 0.3 * this.scaleY).refreshBody(); this.enemies.getChildren().forEach((e, i) => { if(!e.body) return; const data = enemyData[i]; e.setPosition(data.x * this.scaleX, data.y * this.scaleY).setScale(spriteScale); e.minX = data.minX; e.maxX = data.maxX; }); if(this.boss && this.boss.active) this.boss.setPosition(bossData.x * this.scaleX, bossData.y * this.scaleY).setScale(spriteScale * 1.5); if (this.scoreText) this.scoreText.setPosition(16 * this.scaleX, 16 * this.scaleY).setFontSize(24 * spriteScale); if (this.isMobile && this.btnLeft) { const padding = 25 * spriteScale; this.btnLeft.setPosition(padding, height - padding - this.btnLeft.height); this.btnRight.setPosition(padding + this.btnLeft.width + padding, height - padding - this.btnRight.height); this.btnUp.setPosition(width - padding - this.btnUp.width, height - padding - this.btnUp.height); 
-        // MODIFIED: Increased button size from 50 to 60
-        [this.btnLeft, this.btnRight, this.btnUp, this.btnDown].forEach(btn => btn.setFontSize(60 * spriteScale)); } }
-    shootBullet() { if (!this.lastShot || this.time.now - this.lastShot > 500) { let bullet = this.bullets.create(this.player.x, this.player.y, 'bullet'); bullet.setVelocityX(this.player.body.velocity.x + (400 * this.scaleX)); this.lastShot = this.time.now; } }
-    createMobileButtons() { this.moveLeft = this.moveRight = this.moveUp = false; 
-        // MODIFIED: Increased button size from 50px to 60px
-        const style = { fontSize: '60px', backgroundColor: 'rgba(255,255,255,0.2)', padding: { x: 10, y: 5 }, borderRadius: '10px' }; 
-        this.btnLeft = this.add.text(0, 0, '◀️', style).setInteractive().setScrollFactor(0).setDepth(100); this.btnRight = this.add.text(0, 0, '▶️', style).setInteractive().setScrollFactor(0).setDepth(100); this.btnUp = this.add.text(0, 0, '🔼', style).setInteractive().setScrollFactor(0).setDepth(100); this.btnDown = this.add.text(this.scale.width - 100, 100, '🔥', style).setInteractive().setScrollFactor(0).setDepth(100); this.btnLeft.on('pointerdown', () => { this.moveLeft = true; }).on('pointerup', () => { this.moveLeft = false; }).on('pointerout', () => { this.moveLeft = false; }); this.btnRight.on('pointerdown', () => { this.moveRight = true; }).on('pointerup', () => { this.moveRight = false; }).on('pointerout', () => { this.moveRight = false; }); this.btnUp.on('pointerdown', () => { this.moveUp = true; }).on('pointerup', () => { this.moveUp = false; }).on('pointerout', () => { this.moveUp = false; }); this.btnDown.on('pointerdown', () => { this.shootBullet(); const padding = 50 * Math.min(this.scaleX, this.scaleY); const randomX = Phaser.Math.Between(padding, this.scale.width - this.btnDown.width - padding); const randomY = Phaser.Math.Between(padding, this.scale.height - this.btnDown.height - padding); this.btnDown.setPosition(randomX, randomY); }); }
-    triggerQuestion(source, isFinal = false) { if (this.activeQuestion) return; if (source) source.destroy(); const q = isFinal ? finalQuestion : this.questionsLeft.shift(); if (!q) return; this.activeQuestion = q; this.physics.pause(); this.showQuiz(q); }
-    showQuiz(q) { const qc = document.getElementById('quiz-container'); qc.style.display = 'block'; document.getElementById('quiz-question').innerText = q.q; const qo = document.getElementById('quiz-options'); qo.innerHTML = ''; q.opts.forEach((opt, i) => { let btn = document.createElement('button'); btn.innerText = opt; btn.onclick = () => this.checkAnswer(i === q.a, i); qo.appendChild(btn); }); let timeLeft = 10; const timerEl = document.getElementById('quiz-timer'); timerEl.innerText = "Time: " + timeLeft; this.quizTimer = setInterval(() => { timeLeft--; timerEl.innerText = "Time: " + timeLeft; if (timeLeft <= 0) { clearInterval(this.quizTimer); this.checkAnswer(false, -1); } }, 1000); }
-    checkAnswer(correct, selectedIndex) { clearInterval(this.quizTimer); const q = this.activeQuestion; this.quizResults.push({ question: q.q, correct: correct }); if (correct) { const points = q.points || 10; this.score += points; this.scoreText.setText('Score: ' + this.score); } const wasFinalQuestion = !!q.points; document.getElementById('quiz-container').style.display = 'none'; this.activeQuestion = null; if (wasFinalQuestion) { this.gameOver = true; this.physics.pause(); this.displayScorecard(); } else { this.physics.resume(); } }
-    displayScorecard() { const scorecardContainer = document.getElementById('scorecard-container'); const resultsDiv = document.getElementById('scorecard-results'); const finalScoreEl = document.getElementById('scorecard-final-score'); resultsDiv.innerHTML = ''; const resultsList = document.createElement('ul'); this.quizResults.forEach(result => { const listItem = document.createElement('li'); listItem.innerHTML = `<b>Q:</b> ${result.question}`; listItem.className = result.correct ? 'correct' : 'wrong'; resultsList.appendChild(listItem); }); resultsDiv.appendChild(resultsList); finalScoreEl.innerText = `Final Score: ${this.score}`; scorecardContainer.style.display = 'block'; }
-}
 
-const config = {
-    type: Phaser.AUTO,
-    width: '100%', height: '100%',
-    scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
-    physics: { default: 'arcade', arcade: { gravity: { y: 600 }, debug: false }},
-    scene: MyGame
-};
-new Phaser.Game(config);
-</script>
-</body>
+        handlePlayerLandOnPlatform(player, platform) {
+          if (player.body.touching.down && !platform.isBreaking) {
+            if (this.breakablePlatforms.has(platform)) {
+              platform.isBreaking = true;
+
+              this.tweens.add({
+                targets: platform,
+                alpha: 0.2,
+                yoyo: true,
+                repeat: 4,
+                duration: 150,
+                onComplete: () => {
+                  platform.clearTint();
+                  platform.disableBody(true, true);
+                },
+              });
+            }
+          }
+        }
+
+        // --- Unchanged Functions ---
+        handleBulletEnemyCollision(bullet, enemy) {
+          bullet.destroy();
+          if (enemy.isQuestionEnemy) this.triggerQuestion(enemy, false);
+          else enemy.destroy();
+        }
+        handleBulletBossCollision(boss, bullet) {
+          bullet.destroy();
+          boss.health--;
+          boss.setTint(0xff0000);
+          this.time.delayedCall(100, () => boss.clearTint());
+          if (boss.health <= 0) {
+            boss.destroy();
+            this.triggerQuestion(null, true);
+          }
+        }
+        bossShoot() {
+          if (!this.boss.active || this.gameOver) return;
+          const bullet = this.bossBullets.create(
+            this.boss.x,
+            this.boss.y,
+            'bullet'
+          );
+          bullet.setTint(0xffa500).setScale(1.5);
+          this.physics.moveToObject(bullet, this.player, 250 * this.scaleX);
+        }
+        spawnLavaPit() {
+          if (this.gameOver) return;
+          const scaledWorldWidth = this.worldWidth * this.scaleX;
+          const spawnX = Phaser.Math.Between(
+            400 * this.scaleX,
+            scaledWorldWidth
+          );
+          const spawnY = (this.baseHeight - 20) * this.scaleY;
+          const lavaPit = this.randomLavaPits.create(spawnX, spawnY, 'lava');
+          lavaPit.setScale(0.8 * this.scaleX, 0.5 * this.scaleY).refreshBody();
+          lavaPit.body.setAllowGravity(false);
+          this.time.delayedCall(5000, () => lavaPit.destroy());
+        }
+        playerDies(instantRestart = false) {
+          if (this.gameOver) return;
+          this.gameOver = true;
+          this.physics.pause();
+          this.player.setTint(0xff0000);
+          if (instantRestart) {
+            this.cameras.main.fadeOut(1000, 0, 0, 0);
+            this.cameras.main.once(
+              Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
+              () => this.scene.restart()
+            );
+          } else {
+            document.getElementById('gameOver').style.display = 'block';
+          }
+        }
+        handleResize(gameSize) {
+          const { width, height } = gameSize;
+          this.scaleX = width / this.baseWidth;
+          this.scaleY = height / this.baseHeight;
+          const spriteScale = Math.min(this.scaleX, this.scaleY);
+          this.physics.world.gravity.y = 600 * this.scaleY;
+          const scaledWorldWidth = this.worldWidth * this.scaleX;
+          const scaledWorldHeight = this.baseHeight * this.scaleY;
+          this.physics.world.setBounds(
+            0,
+            0,
+            scaledWorldWidth,
+            scaledWorldHeight
+          );
+          this.cameras.main.setBounds(
+            0,
+            0,
+            scaledWorldWidth,
+            scaledWorldHeight
+          );
+          if (this.bg) this.bg.setSize(width, height);
+          if (this.lavaFloor) {
+            this.lavaFloor.setPosition(0, (this.baseHeight - 20) * this.scaleY);
+            this.lavaFloor.setSize(scaledWorldWidth, 100 * this.scaleY);
+          }
+          if (this.player)
+            this.player
+              .setPosition(100 * this.scaleX, 450 * this.scaleY)
+              .setScale(spriteScale);
+          this.platforms.getChildren().forEach((p, i) => {
+            if (!p.body) return;
+            p.setPosition(
+              platformData[i].x * this.scaleX,
+              platformData[i].y * this.scaleY
+            )
+              .setScale(0.6 * this.scaleX, 0.5 * this.scaleY)
+              .refreshBody();
+          });
+          this.bricks.getChildren().forEach((b, i) => {
+            if (!b.body) return;
+            b.setPosition(
+              brickData[i].x * this.scaleX,
+              brickData[i].y * this.scaleY
+            )
+              .setScale(spriteScale)
+              .refreshBody();
+          });
+          this.spike.getChildren().forEach((s, i) =>
+            s
+              .setPosition(
+                spikeData[i].x * this.scaleX,
+                spikeData[i].y * this.scaleY
+              )
+              .setScale(0.6 * spriteScale)
+              .refreshBody()
+          );
+          this.lava
+            .setPosition(lavaData.x * this.scaleX, lavaData.y * this.scaleY)
+            .setScale(0.6 * this.scaleX, 0.3 * this.scaleY)
+            .refreshBody();
+          this.enemies.getChildren().forEach((e, i) => {
+            if (!e.body) return;
+            const data = enemyData[i];
+            e.setPosition(data.x * this.scaleX, data.y * this.scaleY).setScale(
+              spriteScale
+            );
+            e.minX = data.minX;
+            e.maxX = data.maxX;
+          });
+          if (this.boss && this.boss.active)
+            this.boss
+              .setPosition(bossData.x * this.scaleX, bossData.y * this.scaleY)
+              .setScale(spriteScale * 1.5);
+          if (this.scoreText)
+            this.scoreText
+              .setPosition(16 * this.scaleX, 16 * this.scaleY)
+              .setFontSize(24 * spriteScale);
+          if (this.isMobile && this.btnLeft) {
+            const padding = 25 * spriteScale;
+            this.btnLeft.setPosition(
+              padding,
+              height - padding - this.btnLeft.height
+            );
+            this.btnRight.setPosition(
+              padding + this.btnLeft.width + padding,
+              height - padding - this.btnRight.height
+            );
+            this.btnUp.setPosition(
+              width - padding - this.btnUp.width,
+              height - padding - this.btnUp.height
+            );
+            // MODIFIED: Increased button size from 50 to 60
+            [this.btnLeft, this.btnRight, this.btnUp, this.btnDown].forEach(
+              (btn) => btn.setFontSize(60 * spriteScale)
+            );
+          }
+        }
+        shootBullet() {
+          if (!this.lastShot || this.time.now - this.lastShot > 500) {
+            let bullet = this.bullets.create(
+              this.player.x,
+              this.player.y,
+              'bullet'
+            );
+            bullet.setVelocityX(
+              this.player.body.velocity.x + 400 * this.scaleX
+            );
+            this.lastShot = this.time.now;
+          }
+        }
+        createMobileButtons() {
+          this.moveLeft = this.moveRight = this.moveUp = false;
+          // MODIFIED: Increased button size from 50px to 60px
+          const style = {
+            fontSize: '60px',
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            padding: { x: 10, y: 5 },
+            borderRadius: '10px',
+          };
+          this.btnLeft = this.add
+            .text(0, 0, '◀️', style)
+            .setInteractive()
+            .setScrollFactor(0)
+            .setDepth(100);
+          this.btnRight = this.add
+            .text(0, 0, '▶️', style)
+            .setInteractive()
+            .setScrollFactor(0)
+            .setDepth(100);
+          this.btnUp = this.add
+            .text(0, 0, '🔼', style)
+            .setInteractive()
+            .setScrollFactor(0)
+            .setDepth(100);
+          this.btnDown = this.add
+            .text(this.scale.width - 100, 100, '🔥', style)
+            .setInteractive()
+            .setScrollFactor(0)
+            .setDepth(100);
+          this.btnLeft
+            .on('pointerdown', () => {
+              this.moveLeft = true;
+            })
+            .on('pointerup', () => {
+              this.moveLeft = false;
+            })
+            .on('pointerout', () => {
+              this.moveLeft = false;
+            });
+          this.btnRight
+            .on('pointerdown', () => {
+              this.moveRight = true;
+            })
+            .on('pointerup', () => {
+              this.moveRight = false;
+            })
+            .on('pointerout', () => {
+              this.moveRight = false;
+            });
+          this.btnUp
+            .on('pointerdown', () => {
+              this.moveUp = true;
+            })
+            .on('pointerup', () => {
+              this.moveUp = false;
+            })
+            .on('pointerout', () => {
+              this.moveUp = false;
+            });
+          this.btnDown.on('pointerdown', () => {
+            this.shootBullet();
+            const padding = 50 * Math.min(this.scaleX, this.scaleY);
+            const randomX = Phaser.Math.Between(
+              padding,
+              this.scale.width - this.btnDown.width - padding
+            );
+            const randomY = Phaser.Math.Between(
+              padding,
+              this.scale.height - this.btnDown.height - padding
+            );
+            this.btnDown.setPosition(randomX, randomY);
+          });
+        }
+        triggerQuestion(source, isFinal = false) {
+          if (this.activeQuestion) return;
+          if (source) source.destroy();
+          const q = isFinal ? finalQuestion : this.questionsLeft.shift();
+          if (!q) return;
+          this.activeQuestion = q;
+          this.physics.pause();
+          this.showQuiz(q);
+        }
+        showQuiz(q) {
+          const qc = document.getElementById('quiz-container');
+          qc.style.display = 'block';
+          document.getElementById('quiz-question').innerText = q.q;
+          const qo = document.getElementById('quiz-options');
+          qo.innerHTML = '';
+          q.opts.forEach((opt, i) => {
+            let btn = document.createElement('button');
+            btn.innerText = opt;
+            btn.onclick = () => this.checkAnswer(i === q.a, i);
+            qo.appendChild(btn);
+          });
+          let timeLeft = 10;
+          const timerEl = document.getElementById('quiz-timer');
+          timerEl.innerText = 'Time: ' + timeLeft;
+          this.quizTimer = setInterval(() => {
+            timeLeft--;
+            timerEl.innerText = 'Time: ' + timeLeft;
+            if (timeLeft <= 0) {
+              clearInterval(this.quizTimer);
+              this.checkAnswer(false, -1);
+            }
+          }, 1000);
+        }
+        checkAnswer(correct, selectedIndex) {
+          clearInterval(this.quizTimer);
+          const q = this.activeQuestion;
+          this.quizResults.push({ question: q.q, correct: correct });
+          if (correct) {
+            const points = q.points || 10;
+            this.score += points;
+            this.scoreText.setText('Score: ' + this.score);
+          }
+          const wasFinalQuestion = !!q.points;
+          document.getElementById('quiz-container').style.display = 'none';
+          this.activeQuestion = null;
+          if (wasFinalQuestion) {
+            this.gameOver = true;
+            this.physics.pause();
+            this.displayScorecard();
+          } else {
+            this.physics.resume();
+          }
+        }
+        displayScorecard() {
+          const scorecardContainer = document.getElementById(
+            'scorecard-container'
+          );
+          const resultsDiv = document.getElementById('scorecard-results');
+          const finalScoreEl = document.getElementById('scorecard-final-score');
+          resultsDiv.innerHTML = '';
+          const resultsList = document.createElement('ul');
+          this.quizResults.forEach((result) => {
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `<b>Q:</b> ${result.question}`;
+            listItem.className = result.correct ? 'correct' : 'wrong';
+            resultsList.appendChild(listItem);
+          });
+          resultsDiv.appendChild(resultsList);
+          finalScoreEl.innerText = `Final Score: ${this.score}`;
+          scorecardContainer.style.display = 'block';
+        }
+      }
+
+      const config = {
+        type: Phaser.AUTO,
+        width: '100%',
+        height: '100%',
+        scale: {
+          mode: Phaser.Scale.RESIZE,
+          autoCenter: Phaser.Scale.CENTER_BOTH,
+        },
+        physics: {
+          default: 'arcade',
+          arcade: { gravity: { y: 600 }, debug: false },
+        },
+        scene: MyGame,
+      };
+      new Phaser.Game(config);
+    </script>
+  </body>
 </html>
