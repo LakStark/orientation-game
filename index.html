@@ -101,15 +101,17 @@ class MyGame extends Phaser.Scene {
     constructor() { super('MyGame'); }
 
     preload() {
-        this.load.image('player', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
-        this.load.image('brick', 'https://labs.phaser.io/assets/sprites/block.png');
-        this.load.image('enemy', 'https://labs.phaser.io/assets/sprites/space-baddie.png');
-        this.load.image('bullet', 'https://labs.phaser.io/assets/sprites/bullet.png');
-        this.load.image('spike', 'https://labs.phaser.io/assets/sprites/spike.png');
-        this.load.image('lava', 'https://labs.phaser.io/assets/sprites/red.png');
-        this.load.image('battle_bg', 'https://labs.phaser.io/assets/skies/space3.png');
-        this.load.image('boss', 'https://labs.phaser.io/assets/sprites/metalslug_monster.png');
+        // --- FIXED ASSET PATHS ---
+        // These now point to your local 'assets' folder.
+        this.load.image('player', 'assets/phaser-dude.png');
+        this.load.image('ground', 'assets/platform.png');
+        this.load.image('brick', 'assets/block.png');
+        this.load.image('enemy', 'assets/space-baddie.png');
+        this.load.image('bullet', 'assets/bullet.png');
+        this.load.image('spike', 'assets/spike.png');
+        this.load.image('lava', 'assets/red.png');
+        this.load.image('battle_bg', 'assets/space3.png');
+        this.load.image('boss', 'assets/metalslug_monster.png');
     }
 
     create() {
@@ -145,12 +147,11 @@ class MyGame extends Phaser.Scene {
         this.player = this.physics.add.sprite(100, 450, 'player').setBounce(0.2).setCollideWorldBounds(true);
         this.bullets = this.physics.add.group();
 
-        // --- ROBUST FIX PART 1: Give the player its own state ---
-        this.player.isVulnerable = false; // Player starts invincible
-        this.tweens.add({ // Blinking effect for feedback
+        this.player.isVulnerable = false;
+        this.tweens.add({
             targets: this.player, alpha: 0.3, duration: 125, repeat: 1, yoyo: true
         });
-        this.time.delayedCall(500, () => { // Timer to make the player vulnerable
+        this.time.delayedCall(500, () => {
             if (this.player && this.player.active) {
                 this.player.isVulnerable = true;
                 this.player.clearAlpha();
@@ -170,7 +171,6 @@ class MyGame extends Phaser.Scene {
         this.physics.add.collider(this.enemies, this.platforms);
         this.physics.add.collider(this.boss, this.platforms);
         
-        // --- ROBUST FIX PART 2: Check for vulnerability before dying ---
         this.physics.add.collider(this.player, this.spike, () => { if (this.player.isVulnerable) this.playerDies(false); });
         this.physics.add.overlap(this.player, this.bricks, (p, brick) => this.triggerQuestion(brick, false));
         this.physics.add.overlap(this.player, this.enemies, () => { if (this.player.isVulnerable) this.playerDies(false); });
@@ -195,7 +195,7 @@ class MyGame extends Phaser.Scene {
     }
 
     update() {
-        if (this.gameOver || !this.player.body) return; // Added !this.player.body check for safety
+        if (this.gameOver || !this.player.body) return;
         
         const baseSpeed = 160 * this.scaleX; const jumpVelocity = -380 * this.scaleY; 
         let vx = 0;
@@ -230,21 +230,18 @@ class MyGame extends Phaser.Scene {
         }
     }
     
-    // --- ROBUST FIX PART 3: The updated playerDies function ---
     playerDies(instantRestart = false) {
-        // This function will now only run if the player is actually vulnerable.
         if (!this.player.isVulnerable) {
             return;
         }
 
-        // Immediately make the player invulnerable to prevent this function from running again.
         this.player.isVulnerable = false;
         this.gameOver = true;
         this.physics.pause();
         this.player.setTint(0xff0000);
 
         if (instantRestart) {
-            this.cameras.main.fadeOut(500, 0, 0, 0); // Shortened fade for quicker restart
+            this.cameras.main.fadeOut(500, 0, 0, 0);
             this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.restart());
         } else {
             document.getElementById('gameOver').style.display = 'block';
