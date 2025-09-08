@@ -75,7 +75,7 @@ const enemyData = [
     {x: 4100, y: 400, minX: 3950, maxX: 4250, isQuestionEnemy: false}
 ];
 const spikeData = [ {x: 1800, y: 480}, {x: 3600, y: 480} ];
-const lavaData = {x: 2100, y: 480}; // This is now just a small lava pit
+const lavaData = {x: 2100, y: 480};
 const bossData = { x: 4650, y: 260 };
 
 const questions = [
@@ -117,17 +117,7 @@ class MyGame extends Phaser.Scene {
         this.baseWidth = 800; this.baseHeight = 600; this.worldWidth = 5000;
         this.scaleX = 1; this.scaleY = 1;
 
-        // --- FIX: Add a spawn invincibility flag to prevent death loops ---
-        this.isSpawning = true;
-        this.time.delayedCall(500, () => { 
-            this.isSpawning = false;
-            if (this.player && this.player.active) {
-                this.player.clearAlpha(); // Ensure player is fully visible after invincibility
-            }
-        });
-
         this.bg = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'battle_bg').setOrigin(0, 0).setScrollFactor(0);
-        
         this.lavaFloor = this.add.tileSprite(0, this.baseHeight - 20, this.worldWidth, 120, 'lava').setOrigin(0, 0);
         this.physics.add.existing(this.lavaFloor, true); 
 
@@ -135,16 +125,9 @@ class MyGame extends Phaser.Scene {
         platformData.forEach(p => this.platforms.create(p.x, p.y, 'ground'));
 
         const allPlatforms = this.platforms.getChildren();
-        const chosenPlatforms = [
-            allPlatforms[2], // 3rd platform
-            allPlatforms[4], // 5th platform
-            allPlatforms[5]  // 6th platform
-        ];
+        const chosenPlatforms = [ allPlatforms[2], allPlatforms[4], allPlatforms[5] ];
         this.breakablePlatforms = new Set(chosenPlatforms);
-        
-        this.breakablePlatforms.forEach(platform => {
-            if(platform) platform.setTint(0xffccaa); 
-        });
+        this.breakablePlatforms.forEach(platform => { if(platform) platform.setTint(0xffccaa); });
 
         this.bricks = this.physics.add.staticGroup(); brickData.forEach(b => this.bricks.create(b.x, b.y, 'brick'));
         this.spike = this.physics.add.staticGroup(); spikeData.forEach(s => this.spike.create(s.x, s.y, 'spike'));
@@ -153,23 +136,25 @@ class MyGame extends Phaser.Scene {
         this.enemies = this.physics.add.group();
         enemyData.forEach(e => {
             let enemy = this.enemies.create(e.x, e.y, 'enemy');
-            enemy.setCollideWorldBounds(true);
-            enemy.minX = e.minX;
+            enemy.setCollideWorldBounds(true).minX = e.minX;
             enemy.maxX = e.maxX;
             enemy.isQuestionEnemy = e.isQuestionEnemy;
-            enemy.direction = 1; // 1 for right, -1 for left
+            enemy.direction = 1;
         });
         
         this.player = this.physics.add.sprite(100, 450, 'player').setBounce(0.2).setCollideWorldBounds(true);
         this.bullets = this.physics.add.group();
 
-        // --- FIX: Add a blinking effect for visual feedback on spawn ---
-        this.tweens.add({
-            targets: this.player,
-            alpha: 0.3,
-            duration: 125,
-            repeat: 1,
-            yoyo: true
+        // --- ROBUST FIX PART 1: Give the player its own state ---
+        this.player.isVulnerable = false; // Player starts invincible
+        this.tweens.add({ // Blinking effect for feedback
+            targets: this.player, alpha: 0.3, duration: 125, repeat: 1, yoyo: true
+        });
+        this.time.delayedCall(500, () => { // Timer to make the player vulnerable
+            if (this.player && this.player.active) {
+                this.player.isVulnerable = true;
+                this.player.clearAlpha();
+            }
         });
 
         this.boss = this.physics.add.sprite(bossData.x, bossData.y, 'boss').setImmovable(true).setCollideWorldBounds(true);
@@ -185,16 +170,17 @@ class MyGame extends Phaser.Scene {
         this.physics.add.collider(this.enemies, this.platforms);
         this.physics.add.collider(this.boss, this.platforms);
         
-        // --- FIX: Add invincibility check to ALL hazard collisions ---
-        this.physics.add.collider(this.player, this.spike, () => { if (!this.isSpawning) this.playerDies(false); });
+        // --- ROBUST FIX PART 2: Check for vulnerability before dying ---
+        this.physics.add.collider(this.player, this.spike, () => { if (this.player.isVulnerable) this.playerDies(false); });
         this.physics.add.overlap(this.player, this.bricks, (p, brick) => this.triggerQuestion(brick, false));
-        this.physics.add.overlap(this.player, this.enemies, () => { if (!this.isSpawning) this.playerDies(false); });
-        this.physics.add.overlap(this.player, this.lava, () => { if (!this.isSpawning) { this.lava.visible = true; this.playerDies(false); } });
-        this.physics.add.overlap(this.player, this.randomLavaPits, () => { if (!this.isSpawning) this.playerDies(true); });
-        this.physics.add.overlap(this.player, this.bossBullets, () => { if (!this.isSpawning) this.playerDies(false); });
+        this.physics.add.overlap(this.player, this.enemies, () => { if (this.player.isVulnerable) this.playerDies(false); });
+        this.physics.add.overlap(this.player, this.lava, () => { if (this.player.isVulnerable) { this.lava.visible = true; this.playerDies(false); } });
+        this.physics.add.overlap(this.player, this.randomLavaPits, () => { if (this.player.isVulnerable) this.playerDies(true); });
+        this.physics.add.overlap(this.player, this.bossBullets, () => { if (this.player.isVulnerable) this.playerDies(false); });
+        this.physics.add.overlap(this.player, this.lavaFloor, () => { if (this.player.isVulnerable) this.playerDies(true); });
+        
         this.physics.add.overlap(this.bullets, this.enemies, this.handleBulletEnemyCollision, null, this);
         this.physics.add.overlap(this.bullets, this.boss, this.handleBulletBossCollision, null, this);
-        this.physics.add.overlap(this.player, this.lavaFloor, () => { if (!this.isSpawning) this.playerDies(true); });
         
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.scoreText = this.add.text(16, 16, 'Score: 0', { fill: '#fff' }).setScrollFactor(0);
@@ -209,7 +195,7 @@ class MyGame extends Phaser.Scene {
     }
 
     update() {
-        if (this.gameOver) return;
+        if (this.gameOver || !this.player.body) return; // Added !this.player.body check for safety
         
         const baseSpeed = 160 * this.scaleX; const jumpVelocity = -380 * this.scaleY; 
         let vx = 0;
@@ -225,18 +211,10 @@ class MyGame extends Phaser.Scene {
         this.enemies.getChildren().forEach(enemy => {
             if (!enemy.body) return;
             const enemySpeed = 50 * this.scaleX;
-
-            if (enemy.x >= enemy.maxX * this.scaleX) {
-                enemy.direction = -1; 
-            } else if (enemy.x <= enemy.minX * this.scaleX) {
-                enemy.direction = 1; 
-            }
-            
+            if (enemy.x >= enemy.maxX * this.scaleX) enemy.direction = -1; 
+            else if (enemy.x <= enemy.minX * this.scaleX) enemy.direction = 1; 
             enemy.setVelocityX(enemySpeed * enemy.direction);
-            
-            if (enemy.body.touching.down) {
-                enemy.setVelocityY(-250 * this.scaleY);
-            }
+            if (enemy.body.touching.down) enemy.setVelocityY(-250 * this.scaleY);
         });
     }
 
@@ -244,19 +222,32 @@ class MyGame extends Phaser.Scene {
         if (player.body.touching.down && !platform.isBreaking) {
             if (this.breakablePlatforms.has(platform)) {
                 platform.isBreaking = true;
-                
                 this.tweens.add({
-                    targets: platform,
-                    alpha: 0.2,
-                    yoyo: true,
-                    repeat: 4,
-                    duration: 150,
-                    onComplete: () => {
-                        platform.clearTint();
-                        platform.disableBody(true, true);
-                    }
+                    targets: platform, alpha: 0.2, yoyo: true, repeat: 4, duration: 150,
+                    onComplete: () => { platform.clearTint(); platform.disableBody(true, true); }
                 });
             }
+        }
+    }
+    
+    // --- ROBUST FIX PART 3: The updated playerDies function ---
+    playerDies(instantRestart = false) {
+        // This function will now only run if the player is actually vulnerable.
+        if (!this.player.isVulnerable) {
+            return;
+        }
+
+        // Immediately make the player invulnerable to prevent this function from running again.
+        this.player.isVulnerable = false;
+        this.gameOver = true;
+        this.physics.pause();
+        this.player.setTint(0xff0000);
+
+        if (instantRestart) {
+            this.cameras.main.fadeOut(500, 0, 0, 0); // Shortened fade for quicker restart
+            this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.restart());
+        } else {
+            document.getElementById('gameOver').style.display = 'block';
         }
     }
     
@@ -264,12 +255,10 @@ class MyGame extends Phaser.Scene {
     handleBulletBossCollision(boss, bullet) { bullet.destroy(); boss.health--; boss.setTint(0xff0000); this.time.delayedCall(100, () => boss.clearTint()); if (boss.health <= 0) { boss.destroy(); this.triggerQuestion(null, true); } }
     bossShoot() { if (!this.boss.active || this.gameOver) return; const bullet = this.bossBullets.create(this.boss.x, this.boss.y, 'bullet'); bullet.setTint(0xffa500).setScale(1.5); this.physics.moveToObject(bullet, this.player, 250 * this.scaleX); }
     spawnLavaPit() { if (this.gameOver) return; const scaledWorldWidth = this.worldWidth * this.scaleX; const spawnX = Phaser.Math.Between(400 * this.scaleX, scaledWorldWidth); const spawnY = (this.baseHeight - 20) * this.scaleY; const lavaPit = this.randomLavaPits.create(spawnX, spawnY, 'lava'); lavaPit.setScale(0.8 * this.scaleX, 0.5 * this.scaleY).refreshBody(); lavaPit.body.setAllowGravity(false); this.time.delayedCall(5000, () => lavaPit.destroy()); }
-    playerDies(instantRestart = false) { if (this.gameOver) return; this.gameOver = true; this.physics.pause(); this.player.setTint(0xff0000); if (instantRestart) { this.cameras.main.fadeOut(1000, 0, 0, 0); this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.restart()); } else { document.getElementById('gameOver').style.display = 'block'; } }
     
     handleResize(gameSize) { 
         const { width, height } = gameSize; 
-        this.scaleX = width / this.baseWidth; 
-        this.scaleY = height / this.baseHeight; 
+        this.scaleX = width / this.baseWidth; this.scaleY = height / this.baseHeight; 
         const spriteScale = Math.min(this.scaleX, this.scaleY); 
         this.physics.world.gravity.y = 600 * this.scaleY; 
         const scaledWorldWidth = this.worldWidth * this.scaleX; 
@@ -291,7 +280,6 @@ class MyGame extends Phaser.Scene {
             this.btnLeft.setPosition(padding, height - padding - this.btnLeft.height); 
             this.btnRight.setPosition(padding + this.btnLeft.width + padding, height - padding - this.btnRight.height); 
             this.btnUp.setPosition(width - padding - this.btnUp.width, height - padding - this.btnUp.height); 
-            // --- MODIFIED: Increased button resize value from 60 to 80 ---
             [this.btnLeft, this.btnRight, this.btnUp, this.btnDown].forEach(btn => btn.setFontSize(80 * spriteScale)); 
         } 
     }
@@ -300,7 +288,6 @@ class MyGame extends Phaser.Scene {
     
     createMobileButtons() { 
         this.moveLeft = this.moveRight = this.moveUp = false; 
-        // --- MODIFIED: Increased button font size from 60px to 80px ---
         const style = { fontSize: '80px', backgroundColor: 'rgba(255,255,255,0.2)', padding: { x: 10, y: 5 }, borderRadius: '10px' }; 
         this.btnLeft = this.add.text(0, 0, '◀️', style).setInteractive().setScrollFactor(0).setDepth(100); 
         this.btnRight = this.add.text(0, 0, '▶️', style).setInteractive().setScrollFactor(0).setDepth(100); 
