@@ -121,7 +121,7 @@ class MyGame extends Phaser.Scene {
         this.isSpawning = true;
         this.time.delayedCall(500, () => { 
             this.isSpawning = false;
-            if (this.player) {
+            if (this.player && this.player.active) {
                 this.player.clearAlpha(); // Ensure player is fully visible after invincibility
             }
         });
