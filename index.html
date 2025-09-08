@@ -75,8 +75,7 @@ const enemyData = [
     {x: 4100, y: 400, minX: 3950, maxX: 4250, isQuestionEnemy: false}
 ];
 const spikeData = [ {x: 1800, y: 480}, {x: 3600, y: 480} ];
-// --- LAVA FIX APPLIED HERE ---
-const lavaData = {x: 2100, y: 560}; // Moved from y:480 to prevent spawn-death on large screens
+// const lavaData = {x: 2100, y: 560}; // REMOVED to prevent scaling bugs
 const bossData = { x: 4650, y: 260 };
 
 const questions = [
@@ -132,7 +131,7 @@ class MyGame extends Phaser.Scene {
 
         this.bricks = this.physics.add.staticGroup(); brickData.forEach(b => this.bricks.create(b.x, b.y, 'brick'));
         this.spike = this.physics.add.staticGroup(); spikeData.forEach(s => this.spike.create(s.x, s.y, 'spike'));
-        this.lava = this.physics.add.staticSprite(lavaData.x, lavaData.y, 'lava'); this.lava.visible = false;
+        // this.lava = this.physics.add.staticSprite(lavaData.x, lavaData.y, 'lava'); this.lava.visible = false; // REMOVED
         
         this.enemies = this.physics.add.group();
         enemyData.forEach(e => {
@@ -173,7 +172,7 @@ class MyGame extends Phaser.Scene {
         this.physics.add.collider(this.player, this.spike, () => { if (this.player.isVulnerable) this.playerDies(false); });
         this.physics.add.overlap(this.player, this.bricks, (p, brick) => this.triggerQuestion(brick, false));
         this.physics.add.overlap(this.player, this.enemies, () => { if (this.player.isVulnerable) this.playerDies(false); });
-        this.physics.add.overlap(this.player, this.lava, () => { if (this.player.isVulnerable) { this.lava.visible = true; this.playerDies(false); } });
+        // this.physics.add.overlap(this.player, this.lava, () => { if (this.player.isVulnerable) { this.lava.visible = true; this.playerDies(false); } }); // REMOVED
         this.physics.add.overlap(this.player, this.randomLavaPits, () => { if (this.player.isVulnerable) this.playerDies(true); });
         this.physics.add.overlap(this.player, this.bossBullets, () => { if (this.player.isVulnerable) this.playerDies(false); });
         this.physics.add.overlap(this.player, this.lavaFloor, () => { if (this.player.isVulnerable) this.playerDies(true); });
@@ -267,7 +266,7 @@ class MyGame extends Phaser.Scene {
         this.platforms.getChildren().forEach((p, i) => { if(!p.body) return; p.setPosition(platformData[i].x * this.scaleX, platformData[i].y * this.scaleY).setScale(0.6 * this.scaleX, 0.5 * this.scaleY).refreshBody()}); 
         this.bricks.getChildren().forEach((b, i) => { if(!b.body) return; b.setPosition(brickData[i].x * this.scaleX, brickData[i].y * this.scaleY).setScale(spriteScale).refreshBody()}); 
         this.spike.getChildren().forEach((s, i) => s.setPosition(spikeData[i].x * this.scaleX, spikeData[i].y * this.scaleY).setScale(0.6 * spriteScale).refreshBody()); 
-        this.lava.setPosition(lavaData.x * this.scaleX, lavaData.y * this.scaleY).setScale(0.6 * this.scaleX, 0.3 * this.scaleY).refreshBody(); 
+        // if (this.lava) { this.lava.setPosition(lavaData.x * this.scaleX, lavaData.y * this.scaleY).setScale(0.6 * this.scaleX, 0.3 * this.scaleY).refreshBody(); } // REMOVED
         this.enemies.getChildren().forEach((e, i) => { if(!e.body) return; const data = enemyData[i]; e.setPosition(data.x * this.scaleX, data.y * this.scaleY).setScale(spriteScale); e.minX = data.minX; e.maxX = data.maxX; }); 
         if(this.boss && this.boss.active) this.boss.setPosition(bossData.x * this.scaleX, bossData.y * this.scaleY).setScale(spriteScale * 1.5); 
         if (this.scoreText) this.scoreText.setPosition(16 * this.scaleX, 16 * this.scaleY).setFontSize(24 * spriteScale); 
