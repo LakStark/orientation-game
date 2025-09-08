@@ -75,7 +75,7 @@ const enemyData = [
     {x: 4100, y: 400, minX: 3950, maxX: 4250, isQuestionEnemy: false}
 ];
 const spikeData = [ {x: 1800, y: 480}, {x: 3600, y: 480} ];
-// --- FINAL FIX APPLIED HERE ---
+// --- LAVA FIX APPLIED HERE ---
 const lavaData = {x: 2100, y: 560}; // Moved from y:480 to prevent spawn-death on large screens
 const bossData = { x: 4650, y: 260 };
 
@@ -102,15 +102,15 @@ class MyGame extends Phaser.Scene {
     constructor() { super('MyGame'); }
 
     preload() {
-        this.load.image('player', 'assets/phaser-dude.png');
-        this.load.image('ground', 'assets/platform.png');
-        this.load.image('brick', 'assets/block.png');
-        this.load.image('enemy', 'assets/space-baddie.png');
-        this.load.image('bullet', 'assets/bullet.png');
-        this.load.image('spike', 'assets/spike.png');
-        this.load.image('lava', 'assets/red.png');
-        this.load.image('battle_bg', 'assets/space3.png');
-        this.load.image('boss', 'assets/metalslug_monster.png');
+        this.load.image('player', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
+        this.load.image('brick', 'https://labs.phaser.io/assets/sprites/block.png');
+        this.load.image('enemy', 'https://labs.phaser.io/assets/sprites/space-baddie.png');
+        this.load.image('bullet', 'https://labs.phaser.io/assets/sprites/bullet.png');
+        this.load.image('spike', 'https://labs.phaser.io/assets/sprites/spike.png');
+        this.load.image('lava', 'https://labs.phaser.io/assets/sprites/red.png');
+        this.load.image('battle_bg', 'https://labs.phaser.io/assets/skies/space3.png');
+        this.load.image('boss', 'https://labs.phaser.io/assets/sprites/metalslug_monster.png');
     }
 
     create() {
